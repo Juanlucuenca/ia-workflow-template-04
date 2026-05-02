@@ -1,40 +1,44 @@
 ---
-description: Create implementation plan with codebase analysis
-argument-hint: <feature description | path/to/prd.md>
+description: Create implementation plan for a single story
+argument-hint: <path/to/story.md | STORY-ID>
 ---
 
-# Implementation Plan Generator
+# Implementation Plan Generator (per-story)
 
 **Input**: $ARGUMENTS
 
 ## Objective
 
-Transform the input into a battle-tested implementation plan through codebase exploration and pattern extraction.
+Transform a single story into a battle-tested implementation plan via codebase exploration. One plan per story (1:1).
 
-**Core Principle**: PLAN ONLY - no code written to the application. This command creates a plan document in `.agents/plans/` that will later be executed by the `/implement` command.
+**Core Principle**: PLAN ONLY — no code written to the application. Plan lives at `.agents/plans/{PRD-ID}/{STORY-ID}-{slug}.plan.md`.
 
 **Order**: CODEBASE FIRST. Solutions must fit existing patterns.
 
 ---
 
-## Phase 1: PARSE
+## Phase 1: PARSE INPUT
 
-### Determine Input Type
+Resolve input to a story file:
 
 | Input | Action |
 |-------|--------|
-| `.prd.md` file | Read PRD, extract next pending phase |
-| Other `.md` file | Read and extract feature description |
-| Free-form text | Use directly as feature input |
-| Blank | Use conversation context |
+| Path to story `.md` | Load directly |
+| `STORY-NNN` | Search `.agents/stories/*/STORY-NNN-*.md`. If multiple, ask user. |
+| Path to PRD `.prd.md` (legacy) | Reject — must target a single story |
+| Blank | List in-progress/todo stories, ask user |
 
-### Extract Feature Understanding
+Read story frontmatter:
+- `id`, `prd`, `slug`, `title`, `type`, `complexity`
+- `branch`, `base_branch`
+- `depends_on`, `blocks`
+- `status` (must be `todo` or `in-progress`)
 
-- **Problem**: What are we solving?
-- **User Story**: As a [user], I want to [action], so that [benefit]
-- **Type**: NEW_CAPABILITY / ENHANCEMENT / REFACTOR / BUG_FIX
-- **Complexity**: LOW / MEDIUM / HIGH
-- **Jira Issue**: If a Jira issue key (e.g., `RH-5`) is available in the conversation context — from a prior `/prime` command, user mention, or PRD — capture it. This is optional but should be included in the plan metadata when available so that `/implement` can update the issue after completion.
+If `status: blocked` → STOP, report blocker.
+
+If `depends_on` non-empty, verify each dependency `status: done`. If not, warn user and ask whether to proceed.
+
+Read parent PRD for architecture context: `.agents/PRDs/{prd}/PRD.md`.
 
 ---
 
@@ -42,63 +46,75 @@ Transform the input into a battle-tested implementation plan through codebase ex
 
 ### Study the Codebase
 
-Use the Explore agent to find:
+Use Explore agent to find:
 
-1. **Similar implementations** - analogous features with file:line references
-2. **Naming conventions** - actual examples from the codebase
-3. **Error handling patterns** - how errors are created and handled
-4. **Type definitions** - relevant interfaces and types
-5. **Test patterns** - test file structure and assertion styles
+1. **Similar implementations** — analogous features with file:line refs
+2. **Naming conventions** — actual examples
+3. **Error handling patterns** — how errors are created/handled
+4. **Type definitions** — relevant interfaces/types
+5. **Test patterns** — test file structure + assertions
 
 ### Document Patterns
 
 | Category | File:Lines | Pattern |
 |----------|------------|---------|
-| NAMING | `path/to/file.py:10-15` | {pattern description} |
-| ERRORS | `path/to/file.py:20-30` | {pattern description} |
-| SCHEMAS | `path/to/schemas.py:1-10` | {pattern description} |
-| COMPONENTS | `frontend/src/components/X.jsx:1-25` | {pattern description} |
+| NAMING | `path/to/file.py:10-15` | {description} |
+| ERRORS | `path/to/file.py:20-30` | {description} |
+| SCHEMAS | `path/to/schemas.py:1-10` | {description} |
+| COMPONENTS | `frontend/src/components/X.jsx:1-25` | {description} |
 
 ---
 
 ## Phase 3: DESIGN
 
-### Map the Changes
-
-- What files need to be created?
-- What files need to be modified?
-- What's the dependency order?
-
-### Identify Risks
-
-| Risk | Mitigation |
-|------|------------|
-| {potential issue} | {how to handle} |
+- Files to CREATE
+- Files to UPDATE
+- Dependency order
+- Risks + mitigations
 
 ---
 
 ## Phase 4: GENERATE
 
-### Create Plan File
+### Plan File Path
 
-**Output path**: `.agents/plans/{kebab-case-name}.plan.md`
+`.agents/plans/{PRD-ID}/{STORY-ID}-{slug}.plan.md`
 
 ```bash
-mkdir -p .agents/plans
+mkdir -p .agents/plans/{PRD-ID}
 ```
 
+### Plan Template
+
 ```markdown
-# Plan: {Feature Name}
+---
+story: {STORY-ID}
+prd: {PRD-ID}
+slug: {kebab-slug}
+title: {Story title}
+type: {NEW_CAPABILITY | ENHANCEMENT | REFACTOR | BUG_FIX}
+complexity: {LOW | MEDIUM | HIGH}
+branch: {feature/PRD-NNN/STORY-NNN-slug}
+base_branch: {epic branch}
+created: {YYYY-MM-DD}
+---
+
+# Plan: {Story Title}
 
 ## Summary
 
-{One paragraph: What we're building and approach}
+{One paragraph: what we're building + approach}
 
 ## User Story
 
 As a {user type}
 I want to {action}
 So that {benefit}
+
+## Story Reference
+
+- Story file: `.agents/stories/{PRD-ID}/{STORY-ID}-{slug}.md`
+- PRD: `.agents/PRDs/{PRD-ID}/PRD.md`
 
 ## Metadata
 
@@ -107,7 +123,10 @@ So that {benefit}
 | Type | {type} |
 | Complexity | {LOW/MEDIUM/HIGH} |
 | Systems Affected | {list} |
-| Jira Issue | {issue key if available, e.g. RH-5, or "N/A"} |
+| Story | {STORY-ID} |
+| PRD | {PRD-ID} |
+| Branch | `{feature branch}` |
+| Base Branch | `{epic branch}` |
 
 ---
 
@@ -145,14 +164,14 @@ So that {benefit}
 
 ## Tasks
 
-Execute in order. Each task is atomic and verifiable.
+Execute in order. Each task is atomic + verifiable.
 
 ### Task 1: {Description}
 
 - **File**: `backend/app/models/resource.py`
 - **Action**: CREATE / UPDATE
 - **Implement**: {what to do}
-- **Mirror**: `backend/app/models/Entity.py:lines` - follow this pattern
+- **Mirror**: `backend/app/models/Entity.py:lines` — follow this pattern
 - **Validate**: `cd backend && uvicorn app.main:app --reload` (server starts without error)
 
 ### Task 2: {Description}
@@ -167,13 +186,20 @@ Execute in order. Each task is atomic and verifiable.
 
 ---
 
+## End-to-End Tests
+
+List manual/automated E2E checks for `/implement` to execute:
+
+- [ ] Start backend, hit `GET /resource` → returns 200 + expected shape
+- [ ] Start frontend, navigate to /resource page → renders correctly
+- [ ] {Other E2E checks}
+
+---
+
 ## Validation
 
 ```bash
-# Frontend lint
 cd frontend && npm run lint
-
-# Backend smoke test
 curl http://localhost:8000/health
 ```
 
@@ -181,23 +207,39 @@ curl http://localhost:8000/health
 
 ## Acceptance Criteria
 
+(Copied from story `{STORY-ID}`)
+
+- [ ] {AC 1}
+- [ ] {AC 2}
 - [ ] All tasks completed
 - [ ] Frontend lint passes
 - [ ] Backend server starts without error
-- [ ] Endpoint returns correct response (manual curl test)
 - [ ] Follows existing patterns
 ```
 
 ---
 
-## Phase 5: OUTPUT
+## Phase 5: UPDATE STORY FILE
+
+After plan written, update the story file frontmatter:
+
+- Set `plan: .agents/plans/{PRD-ID}/{STORY-ID}-{slug}.plan.md`
+- If `status: todo` → set `status: in-progress`
+- Update `updated: {YYYY-MM-DD}`
+
+Then regenerate `.agents/PRDs/{PRD-ID}/index.md` to reflect the new status + plan link.
+
+---
+
+## Phase 6: OUTPUT
 
 ```markdown
 ## Plan Created
 
-**File**: `.agents/plans/{name}.plan.md`
+**Story**: {STORY-ID} — {title}
+**File**: `.agents/plans/{PRD-ID}/{STORY-ID}-{slug}.plan.md`
 
-**Summary**: {2-3 sentence overview}
+**Summary**: {2-3 sentences}
 
 **Scope**:
 - {N} files to CREATE
@@ -208,5 +250,8 @@ curl http://localhost:8000/health
 - {Pattern 1 with file:line}
 - {Pattern 2 with file:line}
 
-**Next Step**: Review the plan, then implement tasks in order.
+**Story Status**: todo → in-progress
+**Index**: regenerated at `.agents/PRDs/{PRD-ID}/index.md`
+
+**Next Step**: `/implement .agents/plans/{PRD-ID}/{STORY-ID}-{slug}.plan.md`
 ```

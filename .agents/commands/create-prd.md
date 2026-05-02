@@ -1,189 +1,181 @@
 ---
-description: Create a comprehensive Product Requirements Document from conversation context
-argument-hint: [output-filename]
+description: Create a comprehensive Product Requirements Document (local file-based workflow)
+argument-hint: [product-slug] [--base-branch main]
 ---
 
 # Create PRD: Generate Product Requirements Document
 
 ## Overview
 
-Generate a comprehensive Product Requirements Document (PRD) based on the current conversation context and requirements discussed. Use the structure and sections defined below to create a thorough, professional PRD.
+Generate a comprehensive PRD based on conversation context. Local file workflow — no Jira. Each PRD lives in its own directory with a status board (`index.md`) that tracks stories.
 
-**Output file name**: $ARGUMENTS (default filename: `PRD.md`)
+**Input**: $ARGUMENTS
+- First arg: product slug (kebab-case). If absent, derive from PRD title.
+- `--base-branch <name>`: base git branch for the epic (default: `main`).
 
-## Output File
+---
 
-Write the PRD to the input filename. Save it in `.agents/PRDs/` directory.
+## Phase 0: ASSIGN ID
+
+1. List `.agents/PRDs/` directories matching `PRD-*`.
+2. Find max numeric ID, increment by 1, zero-pad to 3 digits.
+3. PRD ID format: `PRD-{NNN}-{kebab-slug}` (e.g. `PRD-001-user-auth`).
+4. PRD directory: `.agents/PRDs/{PRD-ID}/`
+5. Files to create:
+   - `.agents/PRDs/{PRD-ID}/PRD.md` — main PRD doc with frontmatter
+   - `.agents/PRDs/{PRD-ID}/index.md` — story status board (initially empty)
+
+```bash
+mkdir -p .agents/PRDs/{PRD-ID}
+```
+
+---
+
+## PRD File Frontmatter
+
+`PRD.md` MUST start with:
+
+```yaml
+---
+id: PRD-{NNN}
+slug: {kebab-slug}
+title: {Product name}
+status: draft           # draft | active | done | archived
+base_branch: main       # base branch for the epic (override via --base-branch)
+epic_branch: epic/PRD-{NNN}-{kebab-slug}
+created: {YYYY-MM-DD}
+updated: {YYYY-MM-DD}
+---
+```
+
+---
 
 ## PRD Structure
 
-Create a well-structured PRD with the following sections. Adapt depth and detail based on available information:
+After frontmatter, generate these sections. Adapt depth to available info.
 
 ### Required Sections
 
-**1. Executive Summary**
-- Concise product overview (2-3 paragraphs)
-- Core value proposition
-- MVP goal statement
+**1. Executive Summary** — overview, value proposition, MVP goal (2-3 paragraphs)
 
-**2. Mission**
-- Product mission statement
-- Core principles (3-5 key principles)
+**2. Mission** — mission statement + 3-5 core principles
 
-**3. Target Users**
-- Primary user personas
-- Technical comfort level
-- Key user needs and pain points
+**3. Target Users** — personas, technical level, needs/pain points
 
-**4. MVP Scope**
-- **In Scope:** Core functionality for MVP (use checkboxes)
-- **Out of Scope:** Features deferred to future phases (use checkboxes)
-- Group by categories (Core Functionality, Technical, Integration, Deployment)
+**4. MVP Scope** — In Scope / Out of Scope (checkboxes), grouped by category
 
-**5. User Stories**
-- Primary user stories (5-8 stories) in format: "As a [user], I want to [action], so that [benefit]"
-- Include concrete examples for each story
-- Add technical user stories if relevant
+**5. User Stories** — 5-8 stories in `As a [user], I want [action], so that [benefit]` format with examples
 
-**6. Core Architecture & Patterns**
-- High-level architecture approach
-- Directory structure (if applicable)
-- Key design patterns and principles
-- Technology-specific patterns
+**6. Core Architecture & Patterns** — high-level architecture, directory structure, design patterns
 
-**7. Tools/Features**
-- Detailed feature specifications
-- If building an agent: Tool designs with purpose, operations, and key features
-- If building an app: Core feature breakdown
+**7. Tools/Features** — detailed feature specs
 
-**8. Technology Stack**
-- Backend/Frontend technologies with versions
-- Dependencies and libraries
-- Optional dependencies
-- Third-party integrations
+**8. Technology Stack** — backend/frontend tech with versions, dependencies
 
-**9. Security & Configuration**
-- Authentication/authorization approach
-- Configuration management (environment variables, settings)
-- Security scope (in-scope and out-of-scope)
-- Deployment considerations
+**9. Security & Configuration** — auth approach, env vars, in-scope/out-of-scope security
 
-**10. API Specification** (if applicable)
-- Endpoint definitions
-- Request/response formats
-- Authentication requirements
-- Example payloads
+**10. API Specification** (if applicable) — endpoints, request/response, auth
 
-**11. Success Criteria**
-- MVP success definition
-- Functional requirements (use checkboxes)
-- Quality indicators
-- User experience goals
+**11. Success Criteria** — MVP definition, functional reqs (checkboxes), quality indicators
 
-**12. Implementation Phases**
-- Break down into 3-4 phases
-- Each phase includes: Goal, Deliverables (checkboxes), Validation criteria
-- Realistic timeline estimates
+**12. Implementation Phases** — 3-4 phases with goal, deliverables, validation
 
-**13. Future Considerations**
-- Post-MVP enhancements
-- Integration opportunities
-- Advanced features for later phases
+**13. Future Considerations** — post-MVP enhancements
 
-**14. Risks & Mitigations**
-- 3-5 key risks with specific mitigation strategies
+**14. Risks & Mitigations** — 3-5 risks with mitigation
 
-**15. Appendix** (if applicable)
-- Related documents
-- Key dependencies with links
-- Repository/project structure
+**15. Appendix** (if applicable) — related docs, dependencies
+
+---
+
+## index.md Structure
+
+Initial content:
+
+```markdown
+# {PRD-ID}: {Title} — Story Board
+
+**PRD**: [PRD.md](./PRD.md)
+**Epic Branch**: `epic/{PRD-ID}-{slug}` (base: `{base_branch}`)
+**Status**: draft
+
+## Stories
+
+_No stories yet. Run `/create-stories .agents/PRDs/{PRD-ID}/PRD.md` to generate._
+
+| ID | Title | Status | Plan | Branch |
+|----|-------|--------|------|--------|
+
+## Legend
+- `todo` — not started
+- `in-progress` — plan exists, work underway
+- `in-review` — implementation done, awaiting review
+- `done` — merged
+- `blocked` — waiting on dependency
+```
+
+`index.md` is a derived view. Story files are the source of truth. Any command that mutates story status MUST regenerate `index.md`.
 
 ---
 
 ## Process
 
 ### Phase 1: EXTRACT
-
-- Review the entire conversation history
-- Identify explicit requirements and implicit needs
-- Note technical constraints and preferences
-- Capture user goals and success criteria
-
-**If critical information is missing**, ask clarifying questions before generating.
-
-**Wait for user response if questions are needed.**
-
----
+- Review conversation history
+- Identify explicit requirements + implicit needs
+- Note constraints/preferences
+- If critical info missing, ask before generating. Wait for response.
 
 ### Phase 2: SYNTHESIZE
-
-- Organize requirements into appropriate sections
-- Fill in reasonable assumptions where details are missing
-- Maintain consistency across sections
-- Ensure technical feasibility
-
----
+- Organize into sections, fill assumptions, ensure feasibility
 
 ### Phase 3: GENERATE
-
-Write the PRD using:
-- Clear, professional language
-- Concrete examples and specifics
-- Markdown formatting (headings, lists, code blocks, checkboxes)
-- Code snippets for technical sections where helpful
-- Concise but comprehensive Executive Summary
-
----
+- Write PRD with frontmatter + sections
+- Write initial `index.md`
+- Use markdown, concrete examples, code snippets where useful
 
 ### Phase 4: VALIDATE
-
-Quality checks before output:
 - All required sections present
-- User stories have clear benefits
-- MVP scope is realistic and well-defined
-- Technology choices are justified
-- Implementation phases are actionable
-- Success criteria are measurable
-- Consistent terminology throughout
+- Frontmatter complete and valid YAML
+- MVP scope realistic
+- IDs unique and sequential
 
 ---
 
 ## Phase 5: OUTPUT
 
-After creating the PRD:
-
 ```markdown
 ## PRD Created
 
-**File**: `{output-path}`
+**ID**: {PRD-ID}
+**Files**:
+- `.agents/PRDs/{PRD-ID}/PRD.md`
+- `.agents/PRDs/{PRD-ID}/index.md`
 
-**Product**: {Product name}
-**Problem**: {One line}
-**Solution**: {One line}
+**Product**: {Name}
+**Epic Branch**: `epic/{PRD-ID}-{slug}` (base: `{base_branch}`)
 
 ### Sections Summary
-- {Count} user stories defined
-- {Count} MVP features in scope
-- {Count} implementation phases
-- {Count} risks identified
+- {N} user stories outlined
+- {N} MVP features in scope
+- {N} implementation phases
+- {N} risks identified
 
 ### Assumptions Made
-{List any assumptions due to missing information, or "None"}
+{List or "None"}
 
 ### Recommended Next Steps
-1. Review and refine the PRD with stakeholders
-2. Validate assumptions with target users
-3. Create implementation plan: `/plan {prd-path}`
-4. Begin Phase 1 implementation
+1. Review the PRD
+2. Generate stories: `/create-stories .agents/PRDs/{PRD-ID}/PRD.md`
+3. Plan first story: `/plan .agents/stories/{PRD-ID}/STORY-001-{slug}.md`
+4. Implement: `/implement .agents/plans/{PRD-ID}/STORY-001-{slug}.plan.md`
 ```
 
 ---
 
 ## Style Guidelines
 
-- **Tone:** Professional, clear, action-oriented
-- **Format:** Use markdown extensively (headings, lists, code blocks, tables)
-- **Specificity:** Prefer concrete examples over abstract descriptions
-- **Length:** Comprehensive but scannable
-- For highly technical products, emphasize architecture and technical stack
-- For user-facing products, emphasize user stories and experience
+- Tone: professional, action-oriented
+- Format: markdown (headings, lists, tables, checkboxes)
+- Specificity: concrete > abstract
+- Length: comprehensive but scannable

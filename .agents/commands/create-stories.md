@@ -1,11 +1,11 @@
 ---
-description: Generate Jira user stories from a PRD
-argument-hint: <path-to-prd> [--project PROJECT_KEY] [--epic EPIC_KEY]
+description: Generate local user story files from a PRD
+argument-hint: <path-to-PRD.md | PRD-ID>
 ---
 
-# Create Jira Stories from PRD
+# Create Stories from PRD (local file workflow)
 
-Generate structured user stories from a Product Requirements Document. When Jira MCP is configured, automatically creates the stories in Jira.
+Generate one markdown file per user story under `.agents/stories/{PRD-ID}/`. Each story carries frontmatter the agent uses to track status across the workflow. No Jira.
 
 **Input**: $ARGUMENTS
 
@@ -13,20 +13,22 @@ Generate structured user stories from a Product Requirements Document. When Jira
 
 ## Phase 1: LOAD
 
-Read the PRD file provided as input. If no path given, look for:
-1. `.agents/PRDs/*.prd.md` files
-2. `PRD.md` at project root
-3. Ask the user which PRD to use
+Resolve the PRD:
+1. If arg is a file path → read directly.
+2. If arg matches `PRD-NNN` → resolve to `.agents/PRDs/PRD-NNN-*/PRD.md`.
+3. If arg blank → list `.agents/PRDs/` and ask which PRD.
 
-Extract:
-- User stories already defined in the PRD
-- Acceptance criteria from success criteria and requirements
-- Implementation phases and their deliverables
+Extract from PRD frontmatter:
+- `id` (e.g. `PRD-001`)
+- `slug`
+- `base_branch`
+- `epic_branch`
+
+Extract from PRD body:
+- User stories already defined
+- Acceptance criteria from success criteria + requirements
+- Implementation phases and deliverables
 - Technical constraints and dependencies
-
-Parse optional flags from arguments:
-- `--project` or `-p`: Jira project key (e.g., `RH`, `PROJ`)
-- `--epic` or `-e`: Existing epic key to link stories to (e.g., `RH-42`)
 
 ---
 
@@ -34,176 +36,177 @@ Parse optional flags from arguments:
 
 ### Break Down into Stories
 
-For each feature or requirement in the PRD:
+For each feature/requirement:
 
-1. **Create a user story** in the format:
-   ```
-   As a [user type], I want to [action], so that [benefit]
-   ```
+1. **Story format**: `As a [user], I want [action], so that [benefit]`
+2. **Acceptance criteria** (3-5 per story): `Given [context], when [action], then [result]`
+3. **Complexity**: Small / Medium / Large
+4. **Dependencies**: list blocking story IDs
 
-2. **Define acceptance criteria** (3-5 per story):
-   ```
-   Given [context], when [action], then [expected result]
-   ```
+### Categories
 
-3. **Estimate complexity**: Small / Medium / Large
-   - Small: Single file change, clear implementation
-   - Medium: Multiple files, some design decisions
-   - Large: Cross-cutting concerns, architecture changes
-
-4. **Identify dependencies** between stories
-
-### Story Categories
-
-Group stories by type:
-- **Feature**: New functionality (Jira type: Story)
-- **Enhancement**: Improvement to existing functionality (Jira type: Story)
-- **Bug**: Fix for known issues (Jira type: Bug)
-- **Technical**: Infrastructure, refactoring, tooling (Jira type: Task)
-- **Spike**: Research or investigation needed (Jira type: Task)
+- `feature` — new functionality
+- `enhancement` — improvement
+- `bug` — fix
+- `technical` — infra/refactor/tooling
+- `spike` — research
 
 ---
 
-## Phase 3: STRUCTURE
+## Phase 3: ASSIGN IDs
 
-### For Each Story, Create
+1. Story ID format: `STORY-{NNN}-{kebab-slug}` (NNN zero-pad 3, scoped per PRD).
+2. Number sequentially starting at `001`. Order by phase, then dependencies (blockers before blocked), then priority.
+3. Story directory: `.agents/stories/{PRD-ID}/`
+
+```bash
+mkdir -p .agents/stories/{PRD-ID}
+```
+
+---
+
+## Phase 4: GENERATE STORY FILES
+
+Write one file per story at `.agents/stories/{PRD-ID}/STORY-{NNN}-{slug}.md`:
 
 ```markdown
-## [STORY-ID] Story Title
+---
+id: STORY-{NNN}
+prd: {PRD-ID}
+slug: {kebab-slug}
+title: {Story title}
+type: feature              # feature | enhancement | bug | technical | spike
+priority: high             # high | medium | low
+complexity: small          # small | medium | large
+phase: {phase number/name from PRD}
+status: todo               # todo | in-progress | in-review | done | blocked
+labels: [backend, api]
+branch: feature/{PRD-ID}/STORY-{NNN}-{slug}
+base_branch: {epic_branch from PRD}
+plan: null                 # filled when /plan runs
+report: null               # filled when /implement completes
+depends_on: []             # list of STORY-NNN IDs
+blocks: []                 # list of STORY-NNN IDs
+created: {YYYY-MM-DD}
+updated: {YYYY-MM-DD}
+---
 
-**Type**: Feature | Enhancement | Technical | Spike
-**Jira Type**: Story | Task | Bug
-**Priority**: High | Medium | Low
-**Complexity**: Small | Medium | Large
-**Phase**: (from PRD implementation phases)
-**Labels**: (relevant labels like `frontend`, `backend`, `api`, `database`)
+# {STORY-ID}: {Title}
 
-### Description
-As a [user type], I want to [action], so that [benefit].
+## Description
 
-### Acceptance Criteria
-- [ ] Given [context], when [action], then [result]
-- [ ] Given [context], when [action], then [result]
-- [ ] Given [context], when [action], then [result]
+As a {user type}, I want to {action}, so that {benefit}.
 
-### Technical Notes
+## Acceptance Criteria
+
+- [ ] Given {context}, when {action}, then {result}
+- [ ] Given {context}, when {action}, then {result}
+- [ ] Given {context}, when {action}, then {result}
+
+## Technical Notes
+
 - Key implementation details
 - Files likely to be modified
-- Patterns to follow (reference AGENT.md or project conventions)
+- Patterns to follow (reference AGENTS.md or project conventions)
 
-### Dependencies
-- Blocked by: [other story IDs]
-- Blocks: [other story IDs]
+## Dependencies
+
+- **Blocked by**: {STORY-IDs or "None"}
+- **Blocks**: {STORY-IDs or "None"}
+
+## PRD Reference
+
+Source: [`{PRD-ID}/PRD.md`](../../PRDs/{PRD-ID}/PRD.md) — section {N}
 ```
 
-### Ordering
-
-Order stories by:
-1. Phase (from PRD implementation phases)
-2. Dependencies (blocked stories come after their blockers)
-3. Priority (High first within each phase)
-
 ---
 
-## Phase 4: VALIDATE
+## Phase 5: REGENERATE index.md
 
-Before output, verify:
-- [ ] Every PRD requirement maps to at least one story
-- [ ] No story is too large (break down if > 1 day of work)
-- [ ] Acceptance criteria are testable and specific
-- [ ] Dependencies form a valid DAG (no circular dependencies)
-- [ ] Stories cover the full SDLC: types, validation, services, routes, UI, tests
-- [ ] Each story can be independently reviewed and merged
+Rewrite `.agents/PRDs/{PRD-ID}/index.md` to reflect all stories.
 
----
+Build the story table by reading every `*.md` file under `.agents/stories/{PRD-ID}/` and extracting frontmatter:
 
-## Phase 5: OUTPUT
+```markdown
+# {PRD-ID}: {Title} — Story Board
 
-Create the directory if it doesn't exist: `mkdir -p .agents/stories`
+**PRD**: [PRD.md](./PRD.md)
+**Epic Branch**: `{epic_branch}` (base: `{base_branch}`)
+**Status**: {derived: active if any story not done, else done}
 
-Save the stories to `.agents/stories/` directory as a markdown file.
+## Progress
 
----
+{count_done}/{count_total} stories done — {percent}%
 
-## Phase 6: JIRA INTEGRATION (when MCP is available)
+## Stories
 
-**Check if the Atlassian MCP server is available.** Look for tools prefixed with `mcp__atlassian__` (e.g., `mcp__atlassian__createJiraIssue`, `mcp__atlassian__searchJiraIssuesUsingJql`). If available, offer to push stories directly to Jira.
+| ID | Title | Type | Status | Complexity | Plan | Branch |
+|----|-------|------|--------|------------|------|--------|
+| STORY-001 | {title} | feature | ⬜ todo | small | — | `feature/{PRD-ID}/STORY-001-{slug}` |
+| STORY-002 | {title} | technical | 🟡 in-progress | medium | [plan](../../plans/{PRD-ID}/STORY-002-{slug}.plan.md) | `feature/{PRD-ID}/STORY-002-{slug}` |
 
-### If Atlassian MCP IS available:
+## Status Icons
+- ⬜ todo
+- 🟡 in-progress
+- 🔵 in-review
+- ✅ done
+- 🔴 blocked
 
-1. **Resolve the Cloud ID** by calling `mcp__atlassian__getAccessibleAtlassianResources` to get the site's `cloudId`. You will need this for every subsequent Jira API call.
+## Dependencies
 
-2. **Validate the project and epic** before creating issues:
-   - Call `mcp__atlassian__getJiraIssue` with the epic key (e.g., `RH-1`) to confirm it exists and is an Epic type
-   - Call `mcp__atlassian__getJiraProjectIssueTypesMetadata` with the project key to confirm available issue types (typically: Story, Task, Bug, Subtask)
-
-3. **Ask the user** before creating issues:
-   ```
-   I've generated {count} stories. Would you like me to create these in Jira?
-   - Project: {PROJECT_KEY} (or ask if not provided via --project)
-   - Epic: {EPIC_KEY} (or ask if not provided via --epic)
-   ```
-
-4. **If user confirms**, create issues in Jira using `mcp__atlassian__createJiraIssue` for each story with these parameters:
-   - `cloudId`: The Cloud ID from step 1
-   - `projectKey`: The project key (e.g., `RH`)
-   - `issueTypeName`: Map from story category — use exactly `"Story"`, `"Task"`, or `"Bug"` (these are the available types at hierarchy level 0)
-   - `summary`: Story title
-   - `description`: Full description + acceptance criteria
-   - `contentFormat`: `"markdown"` (so the description can use markdown formatting)
-   - `parent`: The epic key (e.g., `"RH-1"`) — this links the issue under the epic as a child. In team-managed Jira projects, epics are parents of stories/tasks/bugs.
-   - `additional_fields`: Use this for priority and labels, e.g.:
-     ```json
-     {
-       "priority": { "name": "High" },
-       "labels": ["frontend", "api"]
-     }
-     ```
-
-5. **Add technical notes** as a comment on each created issue using `mcp__atlassian__addCommentToJiraIssue`:
-   - `cloudId`: The Cloud ID
-   - `issueIdOrKey`: The key of the newly created issue (e.g., `RH-5`)
-   - `commentBody`: The technical notes content
-   - `contentFormat`: `"markdown"`
-
-6. **Create dependency links** between stories using `mcp__atlassian__createIssueLink`:
-   - `cloudId`: The Cloud ID
-   - `type`: `"Blocks"` (use `mcp__atlassian__getIssueLinkTypes` to confirm available link types)
-   - `inwardIssue`: The blocking issue key
-   - `outwardIssue`: The blocked issue key
-
-7. **Report created issues**:
-   ```markdown
-   ## Jira Issues Created
-
-   | Key | Title | Type | Priority |
-   |-----|-------|------|----------|
-   | RH-2 | Story title | Story | High |
-   | RH-3 | Story title | Task | Medium |
-   ...
-
-   **Epic**: RH-1
-   **Project**: RH
-   **Board URL**: https://{site}.atlassian.net/jira/software/projects/{PROJECT_KEY}/board
-   ```
-
-### If Atlassian MCP is NOT available:
-
-Output the stories as markdown only and note:
+- STORY-002 blocked by STORY-001
+- ...
 ```
-Atlassian MCP is not configured. To push stories to Jira automatically:
-1. Get an API token from https://id.atlassian.com/manage/api-tokens
-2. Configure .mcp.json with Atlassian MCP server credentials
-3. Re-run this command
+
+Status icon mapping (use exactly):
+- `todo` → ⬜
+- `in-progress` → 🟡
+- `in-review` → 🔵
+- `done` → ✅
+- `blocked` → 🔴
+
+---
+
+## Phase 6: VALIDATE
+
+- [ ] Every PRD requirement maps to ≥1 story
+- [ ] No story too large (split if >1-2 days work)
+- [ ] Acceptance criteria testable and specific
+- [ ] Dependencies form a DAG (no cycles)
+- [ ] Stories cover full SDLC (types, validation, services, routes, UI, tests)
+- [ ] Each story independently reviewable/mergeable
+- [ ] All frontmatter fields populated
+- [ ] `index.md` regenerated
+
+---
+
+## Phase 7: OUTPUT
+
+```markdown
+## Stories Created
+
+**PRD**: {PRD-ID}
+**Count**: {N} stories
+**Directory**: `.agents/stories/{PRD-ID}/`
+
+| ID | Title | Type | Complexity |
+|----|-------|------|------------|
+| STORY-001 | {title} | feature | small |
+| ... | ... | ... | ... |
+
+**Status Board**: `.agents/PRDs/{PRD-ID}/index.md`
+
+### Next Steps
+1. Review stories — adjust acceptance criteria as needed
+2. Plan first story: `/plan .agents/stories/{PRD-ID}/STORY-001-{slug}.md`
 ```
 
 ---
 
 ## Tips
 
-- Keep stories small enough to complete in 1-2 days
-- Acceptance criteria should be verifiable without asking the author
-- Technical stories need acceptance criteria too (build passes, tests pass, etc.)
-- Include a "definition of done" story if the team doesn't have one
-- Reference the PRD section for each story so reviewers can trace back
-- Use `contentFormat: "markdown"` on all create/comment calls so descriptions render properly in Jira
+- Keep stories small (1-2 days max)
+- Acceptance criteria must be verifiable without asking the author
+- Technical stories also need acceptance criteria (build passes, tests pass)
+- Reference PRD section in each story for traceability
+- When status changes anywhere in the workflow, regenerate `index.md`

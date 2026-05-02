@@ -1,15 +1,15 @@
 ---
-description: Execute an implementation plan with validation loops
+description: Execute a story implementation plan with branching + status updates
 argument-hint: <path/to/plan.md>
 ---
 
-# Implement Plan
+# Implement Plan (local file workflow)
 
 **Plan**: $ARGUMENTS
 
-## Your Mission
+## Mission
 
-Execute the plan end-to-end with rigorous self-validation. This is the **primary command for executing codebase modifications** based on a previously generated plan.
+Execute the plan end-to-end with rigorous self-validation. Manage git branches per PRD/story. Update story status + regenerate PRD `index.md`. No Jira.
 
 **Core Philosophy**: Validation loops catch mistakes early. Run checks after every change. Fix issues immediately.
 
@@ -21,78 +21,108 @@ Execute the plan end-to-end with rigorous self-validation. This is the **primary
 
 ### Read the Plan
 
-Load the plan file and extract:
+Load plan file. Extract from frontmatter + body:
 
-- **Summary** - What we're building
-- **Patterns to Mirror** - Code to copy from
-- **Files to Change** - CREATE/UPDATE list
-- **Tasks** - Implementation order
-- **Validation Commands** - How to verify
-- **Jira Issue** - Check the plan's Metadata table for a Jira Issue key (e.g., `RH-5`). If present, this issue will be updated after implementation is complete.
+- `story` — story ID (e.g. `STORY-001`)
+- `prd` — PRD ID (e.g. `PRD-001`)
+- `branch` — feature branch (e.g. `feature/PRD-001/STORY-001-login-form`)
+- `base_branch` — epic branch (e.g. `epic/PRD-001-user-auth`)
+- **Patterns to Mirror** — code to copy from
+- **Files to Change** — CREATE/UPDATE list
+- **Tasks** — implementation order
+- **E2E Tests** — verification steps
+- **Validation Commands** — how to verify
 
 **If plan not found:**
 ```
 Error: Plan not found at $ARGUMENTS
-Create a plan first: /plan "feature description"
+Create a plan first: /plan <story-id-or-path>
 ```
+
+Also load:
+- Story file at `.agents/stories/{prd}/{story}-{slug}.md` (for ACs, status check)
+- PRD frontmatter at `.agents/PRDs/{prd}/PRD.md` (for `base_branch` of epic)
 
 ---
 
-## Phase 2: PREPARE
+## Phase 2: PREPARE GIT
 
-### Git State
+### 2.1 Inspect State
 
 ```bash
 git branch --show-current
-git status
+git status --short
 ```
 
 | State | Action |
 |-------|--------|
-| On main, clean | Create branch: `git checkout -b feature/{plan-name}` |
-| On main, dirty | STOP: "Stash or commit changes first" |
-| On feature branch | Use it |
+| Working tree dirty | STOP: "Stash or commit changes first" |
+| Working tree clean | Proceed |
+
+### 2.2 Ensure Epic Branch Exists
+
+Read PRD's `base_branch` and `epic_branch`.
+
+```bash
+# Does epic branch exist?
+git rev-parse --verify {epic_branch} 2>/dev/null
+```
+
+If absent:
+```bash
+git checkout {base_branch}
+git pull --ff-only          # if remote tracked
+git checkout -b {epic_branch}
+```
+
+If present, skip creation.
+
+### 2.3 Create / Switch Story Branch
+
+```bash
+# Story branch from epic
+git rev-parse --verify {feature_branch} 2>/dev/null
+```
+
+| State | Action |
+|-------|--------|
+| Story branch missing | `git checkout {epic_branch} && git checkout -b {feature_branch}` |
+| Story branch exists, not current | `git checkout {feature_branch}` |
+| Already on story branch | proceed |
 
 ---
 
 ## Phase 3: EXECUTE
 
-**For each task in the plan:**
+For each task in the plan:
 
 ### 3.1 Verify Assumptions
 
-Before writing any code for a task:
-
-- **Read the target file** you're about to create or modify
-- **Read adjacent files** — files it imports from, and files that import it
-- **Verify the plan's references** — do the functions, interfaces, tables, or endpoints the plan mentions actually exist? Do they match the plan's expectations?
-- **If assumptions are wrong**, adapt your approach before implementing. Document what differs from the plan.
+Before writing code:
+- Read the target file
+- Read adjacent files (imports, importers)
+- Verify plan's references — do referenced functions/interfaces/endpoints actually exist?
+- If assumptions wrong, adapt before implementing. Document deviations.
 
 ### 3.2 Implement
 
-- Read the **MIRROR** file reference and understand the pattern to follow
-- Make the change as specified in the plan
-- **Check integration**: verify your change connects correctly to adjacent code — do imports resolve? Do callers/callees still work? Does the data flow correctly across boundaries?
+- Read MIRROR file reference, understand pattern
+- Make change as specified
+- Check integration: imports resolve? Callers/callees still work? Data flow correct across boundaries?
 
 ### 3.3 Validate Immediately
 
-**After EVERY task:**
-
-For backend changes:
+Backend changes:
 ```bash
 cd backend && python -c "from app.main import app; print('OK')"
 ```
 
-For frontend changes:
+Frontend changes:
 ```bash
 cd frontend && npm run lint
 ```
 
-**If it fails:**
-1. Read the error
-2. Fix the issue
-3. Re-run validation
-4. Only proceed when passing
+If fails: read error → fix → re-run → only proceed when passing.
 
 ### 3.4 Track Progress
 
@@ -101,7 +131,7 @@ Task 1: CREATE src/x.ts ✅
 Task 2: UPDATE src/y.ts ✅
 ```
 
-**If you deviate from the plan**, document what changed and why.
+Document deviations from plan with rationale.
 
 ---
 
@@ -110,47 +140,39 @@ Task 2: UPDATE src/y.ts ✅
 ### Run All Checks
 
 ```bash
-# Frontend lint
 cd frontend && npm run lint
-
-# Backend import check
 cd backend && python -c "from app.main import app; print('OK')"
-
-# Backend smoke test (server must be running)
 curl http://localhost:8000/health
 ```
 
-**All must pass with zero errors.**
+All must pass with zero errors.
 
 ### Write Tests
 
 You MUST write tests for new code:
-- Every new function needs at least one test
-- Error cases and edge cases need tests
+- Every new function needs ≥1 test
+- Error/edge cases need tests
 - Update existing tests if behavior changed
-- **Test across boundaries** — don't just test functions in isolation. If you added an API endpoint, test that the endpoint returns the correct response shape and data. If you added a service method, test that it integrates correctly with its callers.
+- Test across boundaries (endpoint shape + data, not just isolated functions)
 
-**If tests fail:**
-1. Determine: bug in implementation or test?
-2. Fix the actual issue
-3. Re-run until green
+If tests fail: bug in impl or test? Fix actual issue. Re-run until green.
 
 ### REQUIRED: End-to-End Verification
 
-> **⚠️ Do NOT proceed to Phase 5 (Report) until all E2E steps below pass.**
+> **⚠️ Do NOT proceed to Phase 5 until all E2E steps pass.**
 
-Re-read the plan and find the end-to-end testing section. Execute every E2E test listed in the plan as a checklist:
+Re-read plan's E2E section. Execute every test as a checklist:
 
-- [ ] Start the application (dev servers, databases, etc.)
-- [ ] For EACH end-to-end test in the plan:
-  - [ ] Execute the test exactly as described
-  - [ ] Verify the expected outcome matches the plan
-  - [ ] If it fails: fix the issue, re-run, confirm it passes
-- [ ] Confirm all E2E tests pass before proceeding
+- [ ] Start app (dev servers, DBs, etc.)
+- [ ] For EACH E2E test in the plan:
+  - [ ] Execute exactly as described
+  - [ ] Verify outcome matches plan
+  - [ ] If fails: fix → re-run → confirm passes
+- [ ] Confirm all E2E tests pass
 
-**If the plan has no E2E tests**, perform a basic smoke test: start the app, exercise the new/changed feature manually, verify it works.
+If plan has no E2E tests, perform basic smoke test (start app, exercise feature manually).
 
-**This is a hard gate.** You cannot report the implementation as complete until E2E verification passes. Static checks and unit tests alone are never sufficient.
+**Hard gate.** Cannot report complete until E2E passes.
 
 ---
 
@@ -158,18 +180,27 @@ Re-read the plan and find the end-to-end testing section. Execute every E2E test
 
 ### Create Report
 
-**Output path**: `.agents/reports/{plan-name}-report.md`
+**Path**: `.agents/reports/{PRD-ID}/{STORY-ID}-{slug}.report.md`
 
 ```bash
-mkdir -p .agents/reports
+mkdir -p .agents/reports/{PRD-ID}
 ```
 
 ```markdown
-# Implementation Report
+---
+story: {STORY-ID}
+prd: {PRD-ID}
+plan: {plan path}
+branch: {feature branch}
+base_branch: {epic branch}
+status: COMPLETE
+completed: {YYYY-MM-DD}
+---
+
+# Implementation Report — {STORY-ID}: {Title}
 
 **Plan**: `{plan-path}`
-**Branch**: `{branch-name}`
-**Status**: COMPLETE
+**Branch**: `{feature branch}` (from `{epic branch}`)
 
 ## Summary
 
@@ -186,9 +217,10 @@ mkdir -p .agents/reports
 
 | Check | Result |
 |-------|--------|
-| Type check | ✅ |
-| Lint | ✅ |
+| Backend import | ✅ |
+| Frontend lint | ✅ |
 | Tests | ✅ ({N} passed) |
+| E2E | ✅ ({N}/{N}) |
 
 ## Files Changed
 
@@ -199,80 +231,90 @@ mkdir -p .agents/reports
 
 ## Deviations from Plan
 
-{List any deviations with rationale, or "None"}
+{List or "None"}
 
 ## Tests Written
 
 | Test File | Test Cases |
 |-----------|------------|
 | `src/x.test.ts` | {list} |
+
+## Acceptance Criteria
+
+- [x] {AC 1}
+- [x] {AC 2}
+- [x] {AC N}
 ```
 
 ### Archive Plan
 
 ```bash
-mkdir -p .agents/plans/completed
-mv $ARGUMENTS .agents/plans/completed/
+mkdir -p .agents/plans/{PRD-ID}/completed
+mv {plan path} .agents/plans/{PRD-ID}/completed/
 ```
 
 ---
 
-## Phase 6: UPDATE JIRA (if issue specified in plan)
+## Phase 6: UPDATE STORY + INDEX
 
-**This phase is mandatory if the plan's Metadata table contains a Jira Issue key.** Skip only if the Jira Issue field is "N/A" or absent.
+### 6.1 Update Story File
 
-### 6.1 Resolve Cloud ID
+Edit `.agents/stories/{PRD-ID}/{STORY-ID}-{slug}.md` frontmatter:
+- `status: in-review`
+- `report: .agents/reports/{PRD-ID}/{STORY-ID}-{slug}.report.md`
+- `plan: .agents/plans/{PRD-ID}/completed/{STORY-ID}-{slug}.plan.md`
+- `updated: {YYYY-MM-DD}`
 
-Call `mcp__atlassian__getAccessibleAtlassianResources` to get the `cloudId`.
+### 6.2 Regenerate Index
 
-### 6.2 Transition the Issue
+Rewrite `.agents/PRDs/{PRD-ID}/index.md` based on current story frontmatter (see `create-stories.md` Phase 5 for format).
 
-1. Call `mcp__atlassian__getTransitionsForJiraIssue` with `cloudId` and `issueIdOrKey` to get available transitions — each transition has a numeric `id` and a `name`
-2. Find the most appropriate transition (prefer "In Review" or "In Progress"; fall back to "Done" if no review state exists)
-3. Call `mcp__atlassian__transitionJiraIssue` with:
-   - `cloudId`: The Cloud ID
-   - `issueIdOrKey`: The issue key
-   - `transition`: `{ "id": "{transition_id}" }` — use the numeric ID from step 1, NOT the status name
-
-### 6.3 Add Implementation Comment
-
-Call `mcp__atlassian__addCommentToJiraIssue` with:
-- `issueIdOrKey`: The Jira issue key from the plan
-- `contentFormat`: `"markdown"`
-- `commentBody`: A summary including:
-  - What was implemented
-  - Branch name
-  - Files created/updated (count)
-  - Tests written (count)
-  - Any deviations from the plan
-  - Link to the implementation report file path
-
-### 6.4 Update Issue Description (if needed)
-
-If the implementation resulted in meaningful deviations from the original issue description, call `mcp__atlassian__editJiraIssue` with:
-- `cloudId`: The Cloud ID
-- `issueIdOrKey`: The issue key
-- `contentFormat`: `"markdown"`
-- `fields`: An object with the fields to update, e.g. `{ "description": "updated description..." }`
+Update PRD `updated` field.
 
 ---
 
-## Phase 7: OUTPUT
+## Phase 7: MERGE GUIDANCE (manual)
+
+Do NOT auto-merge. Surface clear next-step commands so the user can decide.
+
+```markdown
+### Next Steps
+
+1. Review report: `.agents/reports/{PRD-ID}/{STORY-ID}-{slug}.report.md`
+2. Review diff: `git diff {epic branch}...{feature branch}`
+3. When approved, merge story → epic:
+   ```bash
+   git checkout {epic branch}
+   git merge --no-ff {feature branch}
+   ```
+4. After merge, mark story `done` in `.agents/stories/{PRD-ID}/{STORY-ID}-{slug}.md` and regenerate `index.md`.
+5. When all stories done, merge epic → `{base_branch}`:
+   ```bash
+   git checkout {base_branch}
+   git merge --no-ff {epic branch}
+   ```
+```
+
+---
+
+## Phase 8: OUTPUT
 
 ```markdown
 ## Implementation Complete
 
-**Plan**: `{plan-path}`
-**Branch**: `{branch-name}`
-**Status**: ✅ Complete
+**Story**: {STORY-ID} — {title}
+**PRD**: {PRD-ID}
+**Branch**: `{feature branch}` (from `{epic branch}`)
+**Status**: ✅ in-review
 
 ### Validation
 
 | Check | Result |
 |-------|--------|
-| Type check | ✅ |
-| Lint | ✅ |
+| Backend import | ✅ |
+| Frontend lint | ✅ |
 | Tests | ✅ |
+| E2E | ✅ |
 
 ### Files Changed
 
@@ -286,18 +328,21 @@ If the implementation resulted in meaningful deviations from the original issue 
 
 ### Artifacts
 
-- Report: `.agents/reports/{name}-report.md`
-- Plan archived: `.agents/plans/completed/`
+- Report: `.agents/reports/{PRD-ID}/{STORY-ID}-{slug}.report.md`
+- Plan archived: `.agents/plans/{PRD-ID}/completed/`
+- Story status: `todo` → `in-progress` → `in-review`
+- Index updated: `.agents/PRDs/{PRD-ID}/index.md`
 
-### Jira
+### Story Progress (PRD-level)
 
-{If issue was updated: "Updated {ISSUE_KEY}: transitioned to {status}, added implementation comment." Otherwise: "No Jira issue linked."}
+{done}/{total} stories done — {percent}%
 
 ### Next Steps
 
-1. Review the report
-2. Create PR: `gh pr create`
-3. Merge when approved
+1. Review diff: `git diff {epic branch}...{feature branch}`
+2. Merge to epic when approved (commands above)
+3. Mark story `done` after merge
+4. Plan next story: `/plan <next-story-id>`
 ```
 
 ---
@@ -306,7 +351,9 @@ If the implementation resulted in meaningful deviations from the original issue 
 
 | Failure | Action |
 |---------|--------|
-| Type check fails | Read error, fix issue, re-run |
-| Tests fail | Fix implementation or test, re-run |
-| Lint fails | Run `cd frontend && npm run lint`, fix reported issues manually |
-| Backend import fails | Check Python syntax and imports, fix and re-run |
+| Type check fails | Read error, fix, re-run |
+| Tests fail | Fix impl or test, re-run |
+| Lint fails | `cd frontend && npm run lint`, fix manually |
+| Backend import fails | Check Python syntax/imports, fix, re-run |
+| Branch creation fails | Check `base_branch`/`epic_branch` exist, working tree clean |
+| Dirty working tree | STOP, ask user to stash/commit |
