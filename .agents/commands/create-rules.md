@@ -1,16 +1,16 @@
 ---
-description: Create global rules (CLAUDE.md) from codebase analysis
+description: Create global rules (AGENT.md) from codebase analysis
 ---
 
 # Create Global Rules
 
-Generate a CLAUDE.md file by analyzing the codebase and extracting patterns.
+Generate a AGENT.md file by analyzing the codebase and extracting patterns.
 
 ---
 
 ## Objective
 
-Create project-specific global rules that give Claude context about:
+Create project-specific global rules that give AI AGENT context about:
 - What this project is
 - Technologies used
 - How the code is organized
@@ -90,11 +90,11 @@ Identify files that are important to understand:
 
 ## Phase 3: GENERATE
 
-### Create CLAUDE.md
+### Create AGENT.md
 
-Use the template at `.claude/CLAUDE-template.md` as a starting point.
+Use the template at `.agents/AGENT-template.md` as a starting point.
 
-**Output path**: `CLAUDE.md` (project root)
+**Output path**: `AGENT.md` (project root)
 
 **Adapt to the project:**
 - Remove sections that don't apply
@@ -124,7 +124,7 @@ Use the template at `.claude/CLAUDE-template.md` as a starting point.
 ```markdown
 ## Global Rules Created
 
-**File**: `CLAUDE.md`
+**File**: `AGENT.md`
 
 ### Project Type
 
@@ -140,7 +140,7 @@ Use the template at `.claude/CLAUDE-template.md` as a starting point.
 
 ### Next Steps
 
-1. Review the generated `CLAUDE.md`
+1. Review the generated `AGENT.md`
 2. Add any project-specific notes
 3. Remove any sections that don't apply
 4. Optionally create reference docs for deeper context
@@ -150,7 +150,7 @@ Use the template at `.claude/CLAUDE-template.md` as a starting point.
 
 ## Tips
 
-- Keep CLAUDE.md focused and scannable
+- Keep AGENT.md focused and scannable
 - Don't duplicate information that's in other docs (link instead)
 - Focus on patterns and conventions, not exhaustive documentation
 - Update it as the project evolves

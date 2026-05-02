@@ -43,9 +43,9 @@ curl http://localhost:8000/health
 
 ```
 ai-template-clase04/
-├── frontend/       # React SPA (see frontend/CLAUDE.md)
-├── backend/        # FastAPI REST API (see backend/CLAUDE.md)
-├── .claude/        # Claude Code config, skills, commands
+├── frontend/       # React SPA (see frontend/AGENT.md)
+├── backend/        # FastAPI REST API (see backend/AGENT.md)
+├── .agents/        # Agent config, skills, commands
 └── .agents/        # Agent-generated outputs (PRDs, stories)
 ```
 
@@ -105,9 +105,9 @@ cd backend && uvicorn app.main:app --reload
 
 | Topic | File |
 |-------|------|
-| Frontend patterns, routing, components | `frontend/CLAUDE.md` |
-| Backend architecture, resource pattern | `backend/CLAUDE.md` |
-| Claude Code skill definitions | `.claude/commands/` |
+| Frontend patterns, routing, components | `frontend/AGENT.md` |
+| Backend architecture, resource pattern | `backend/AGENT.md` |
+| Skill definitions | `.agents/commands/` |
 
 ---
 

@@ -11,6 +11,8 @@ argument-hint: [jira-issues] [confluence-pages]
 
 Build comprehensive understanding of this codebase by analyzing structure and key files.
 
+**Core Principle**: READ ONLY - no code written. This command is strictly for analysis and context building.
+
 ## Process
 
 ### Step 0: Load External Context (if provided)
@@ -29,7 +31,7 @@ If Confluence page IDs are provided:
 
 ### Step 1: Analyze the Codebase
 
-1. Read `backend/CLAUDE.md` for backend conventions and architecture
+1. Read `backend/AGENTS.md` for backend conventions and architecture
 2. Study backend structure (`backend/app/`) — routers, services, repositories, models, schemas
 3. Study frontend structure (`frontend/src/`) — pages, components, layouts, lib
 4. Check `frontend/package.json` for frontend dependencies

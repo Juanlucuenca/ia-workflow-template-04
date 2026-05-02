@@ -89,7 +89,7 @@ As a [user type], I want to [action], so that [benefit].
 ### Technical Notes
 - Key implementation details
 - Files likely to be modified
-- Patterns to follow (reference CLAUDE.md or project conventions)
+- Patterns to follow (reference AGENT.md or project conventions)
 
 ### Dependencies
 - Blocked by: [other story IDs]

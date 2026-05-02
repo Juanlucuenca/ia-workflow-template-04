@@ -29,7 +29,7 @@ If Confluence page IDs are provided:
 
 ### Step 1: Analyze the Codebase
 
-1. Read `backend/CLAUDE.md` for architecture overview and conventions
+1. Read `backend/AGENT.md` for architecture overview and conventions
 2. Study a complete resource slice (`backend/app/routers/`, `backend/app/services/`, `backend/app/repositories/`, `backend/app/models/`, `backend/app/schemas/`) — use the existing Entity files as reference
 3. Study core setup (`backend/app/core/`) — config, database, middleware
 4. Read `backend/app/main.py` — app factory, router registration, middleware order

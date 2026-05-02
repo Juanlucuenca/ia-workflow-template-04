@@ -11,7 +11,7 @@ argument-hint: <feature description | path/to/prd.md>
 
 Transform the input into a battle-tested implementation plan through codebase exploration and pattern extraction.
 
-**Core Principle**: PLAN ONLY - no code written. Create a context-rich document that enables one-pass implementation.
+**Core Principle**: PLAN ONLY - no code written to the application. This command creates a plan document in `.agents/plans/` that will later be executed by the `/implement` command.
 
 **Order**: CODEBASE FIRST. Solutions must fit existing patterns.
 

@@ -1,12 +1,12 @@
-# CLAUDE.md Template
+# AGENT.md Template
 
 A flexible template for creating global rules. Adapt sections based on your project type.
 
 ---
 
-# CLAUDE.md
+# AGENT.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI Agent  when working with code in this repository.
 
 ## Project Overview
 

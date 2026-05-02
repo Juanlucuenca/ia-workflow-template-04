@@ -9,7 +9,7 @@ argument-hint: <path/to/plan.md>
 
 ## Your Mission
 
-Execute the plan end-to-end with rigorous self-validation.
+Execute the plan end-to-end with rigorous self-validation. This is the **primary command for executing codebase modifications** based on a previously generated plan.
 
 **Core Philosophy**: Validation loops catch mistakes early. Run checks after every change. Fix issues immediately.
 

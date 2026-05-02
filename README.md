@@ -18,11 +18,11 @@ Todo codebase ahora tiene dos capas: el código en sí, y la capa de IA — todo
 
 Tres componentes:
 
-- **Reglas globales (`CLAUDE.md`)** — siempre cargadas. Stack tecnológico, patrones de código, estándares de testing, comandos de deploy. Mantenerlas ajustadas.
+- **Reglas globales (`AGENT.md`)** — siempre cargadas. Stack tecnológico, patrones de código, estándares de testing, comandos de deploy. Mantenerlas ajustadas.
 - **Contexto bajo demanda** — docs de referencia, guías de estilo, patrones de API. Se cargan solo cuando son relevantes para no inflar cada sesión.
 - **Comandos y skills** — flujos de trabajo empaquetados y reutilizables. `/create-prd`, `/prime`, `/plan`, `/implement`. Acá es donde estandarizás cómo construye tu equipo.
 
-Cuando la carpeta `.claude/` está en source control junto con el código, las mejoras de IA funcionan exactamente como las mejoras de código: pull requests, revisiones, y todo el equipo se beneficia.
+Cuando la carpeta `.agents/` está en source control junto con el código, las mejoras de IA funcionan exactamente como las mejoras de código: pull requests, revisiones, y todo el equipo se beneficia.
 
 ---
 
@@ -52,7 +52,7 @@ El objetivo es empujar la línea entre las capas 3 y 4 lo más abajo posible.
 
 1. **Convertí todo en comando.** Si escribís algo más de dos veces, debe ser un comando. Reutilizable, compartible, evolucionable.
 2. **Reducí las suposiciones.** Preguntas antes del PRD. Revisá el PRD antes de las historias. Revisá el plan antes de ejecutar. Lo más peligroso en el desarrollo con IA no es que el modelo se equivoque — es que el modelo asuma. Cada pregunta que hace es una suposición que no está haciendo.
-3. **El contexto es rey.** Reset entre planificación e implementación. Sub-agentes solo para investigación. Contexto bajo demanda en lugar de un `CLAUDE.md` inflado.
+3. **El contexto es rey.** Reset entre planificación e implementación. Sub-agentes solo para investigación. Contexto bajo demanda en lugar de un `AGENT.md` inflado.
 4. **El git log es memoria.** Comiteá frecuentemente y con mensajes descriptivos. Tu agente lee este historial en cada `/prime`.
 5. **El sistema evoluciona.** Cada bug que comete tu agente es una oportunidad de mejorar la capa de IA para que nunca vuelva a cometer ese error. Tu sistema se compone.
 
@@ -61,8 +61,8 @@ El objetivo es empujar la línea entre las capas 3 y 4 lo más abajo posible.
 ## Qué Hay en Este Repo
 
 ```
-.claude/
-├── CLAUDE.md                   # Reglas del proyecto para el agente
+.agents/
+├── AGENT.md                   # Reglas del proyecto para el agente
 ├── commands/                   # Flujos de trabajo reutilizables
 │   ├── prime, prime-server, prime-client, prime-endpoint, prime-components
 │   ├── create-prd, prd-interactive, create-rules
@@ -88,7 +88,7 @@ backend/                        # API REST en FastAPI
 | `/prime-client` | Contexto enfocado en el frontend |
 | `/prime-endpoint` | Aprender cómo construir nuevos endpoints |
 | `/prime-components` | Aprender cómo construir componentes |
-| `/create-rules` | Generar o actualizar `CLAUDE.md` para un nuevo codebase |
+| `/create-rules` | Generar o actualizar `AGENT.md` para un nuevo codebase |
 | `/create-prd` | Generar un PRD desde un brain dump |
 | `/prd-interactive` | Generación de PRD paso a paso |
 | `/create-stories` | Convertir un PRD en historias de usuario |
@@ -151,17 +151,17 @@ backend/app/
 └── routers/       # Endpoints HTTP
 ```
 
-Para patrones de frontend, routing y componentes: `frontend/CLAUDE.md`.  
-Para arquitectura del backend y el patrón de recursos: `backend/CLAUDE.md`.
+Para patrones de frontend, routing y componentes: `frontend/AGENT.md`.  
+Para arquitectura del backend y el patrón de recursos: `backend/AGENT.md`.
 
 ---
 
 ## Usar Esta Capa de IA en Tu Propio Proyecto
 
-La carpeta `.claude/` es portable. Para adoptarla:
+La carpeta `.agents/` es portable. Para adoptarla:
 
-1. Copiar `.claude/` a tu repo
-2. Correr `/create-rules` para generar un `CLAUDE.md` ajustado a tu stack
+1. Copiar `.agents/` a tu repo
+2. Correr `/create-rules` para generar un `AGENT.md` ajustado a tu stack
 3. Empezar con `/prime`, luego un brain dump en `/create-prd`, luego `/plan`, luego `/implement`
 
 El estándar de tu equipo para cómo construye está ahora en source control y es revisable.
