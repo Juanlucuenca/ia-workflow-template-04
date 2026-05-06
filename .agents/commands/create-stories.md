@@ -81,10 +81,10 @@ complexity: small          # small | medium | large
 phase: {phase number/name from PRD}
 status: todo               # todo | in-progress | in-review | done | blocked
 labels: [backend, api]
-branch: feature/{PRD-ID}/STORY-{NNN}-{slug}
-base_branch: {epic_branch from PRD}
+epic_branch: {epic_branch from PRD}   # all stories commit on this branch — no per-story branch
 plan: null                 # filled when /plan runs
 report: null               # filled when /implement completes
+commit: null               # filled when /implement commits the story (SHA)
 depends_on: []             # list of STORY-NNN IDs
 blocks: []                 # list of STORY-NNN IDs
 created: {YYYY-MM-DD}
@@ -140,10 +140,13 @@ Build the story table by reading every `*.md` file under `.agents/stories/{PRD-I
 
 ## Stories
 
-| ID | Title | Type | Status | Complexity | Plan | Branch |
+All stories commit on the epic branch `{epic_branch}`. No per-story branches.
+
+| ID | Title | Type | Status | Complexity | Plan | Commit |
 |----|-------|------|--------|------------|------|--------|
-| STORY-001 | {title} | feature | ⬜ todo | small | — | `feature/{PRD-ID}/STORY-001-{slug}` |
-| STORY-002 | {title} | technical | 🟡 in-progress | medium | [plan](../../plans/{PRD-ID}/STORY-002-{slug}.plan.md) | `feature/{PRD-ID}/STORY-002-{slug}` |
+| STORY-001 | {title} | feature | ⬜ todo | small | — | — |
+| STORY-002 | {title} | technical | 🟡 in-progress | medium | [plan](../../plans/{PRD-ID}/STORY-002-{slug}.plan.md) | — |
+| STORY-003 | {title} | feature | ✅ done | small | [plan](../../plans/{PRD-ID}/completed/STORY-003-{slug}.plan.md) | `abc1234` |
 
 ## Status Icons
 - ⬜ todo
@@ -174,7 +177,7 @@ Status icon mapping (use exactly):
 - [ ] Acceptance criteria testable and specific
 - [ ] Dependencies form a DAG (no cycles)
 - [ ] Stories cover full SDLC (types, validation, services, routes, UI, tests)
-- [ ] Each story independently reviewable/mergeable
+- [ ] Each story is one commit (small, focused, ordered)
 - [ ] All frontmatter fields populated
 - [ ] `index.md` regenerated
 

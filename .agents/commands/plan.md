@@ -94,8 +94,7 @@ slug: {kebab-slug}
 title: {Story title}
 type: {NEW_CAPABILITY | ENHANCEMENT | REFACTOR | BUG_FIX}
 complexity: {LOW | MEDIUM | HIGH}
-branch: {feature/PRD-NNN/STORY-NNN-slug}
-base_branch: {epic branch}
+epic_branch: {epic branch}        # all stories commit here, no per-story branch
 created: {YYYY-MM-DD}
 ---
 
@@ -125,8 +124,7 @@ So that {benefit}
 | Systems Affected | {list} |
 | Story | {STORY-ID} |
 | PRD | {PRD-ID} |
-| Branch | `{feature branch}` |
-| Base Branch | `{epic branch}` |
+| Epic Branch | `{epic branch}` (commit directly on this branch) |
 
 ---
 
